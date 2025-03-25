@@ -2,75 +2,63 @@ import { useState, useEffect, useRef } from 'react';
 import MQTT from 'mqtt';
 
 export const useMqtt = (macAddress) => {
-    const [datos, setDatos] = useState({ 
-        bombaAgua: false, 
-        ultimaComida: undefined 
+    const [datos, setDatos] = useState({
+        bombaAgua: false,
+        ultimaComida: undefined
     });
     const [conectado, setConectado] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const clientRef = useRef(null);
     const lastMessageTimeRef = useRef(null);
 
-    // Función para controlar dispensador de comida
+    // Funciones de control (dispensarComida y controlarBombaAgua permanecen igual)
     const dispensarComida = () => {
-        if (!clientRef.current || !conectado || !macAddress) {
-            console.error("No se puede dispensar comida: cliente desconectado");
-            return false;
-        }
-        
-        const topic = `mascota/comida/${macAddress}`;
-        clientRef.current.publish(topic, "dispensar");
-        console.log("Comando para dispensar comida enviado");
+        if (!clientRef.current || !conectado || !macAddress) return false;
+        clientRef.current.publish(`mascota/comida/${macAddress}`, "dispensar");
         return true;
     };
 
-    // Función para controlar bomba de agua
     const controlarBombaAgua = (activar) => {
-        if (!clientRef.current || !conectado || !macAddress) {
-            console.error("No se puede controlar bomba: cliente desconectado");
-            return false;
-        }
-        
-        const topic = `mascota/agua/${macAddress}`;
-        const mensaje = activar ? "activar" : "desactivar";
-        clientRef.current.publish(topic, mensaje);
-        console.log(`Comando de bomba de agua '${mensaje}' enviado`);
+        if (!clientRef.current || !conectado || !macAddress) return false;
+        clientRef.current.publish(`mascota/agua/${macAddress}`, activar ? "activar" : "desactivar");
         return true;
     };
 
     useEffect(() => {
         if (!macAddress) {
-            console.error("MAC Address no proporcionada");
+            setError("MAC Address no proporcionada");
             setLoading(false);
             return;
         }
 
-        // Configuración de cliente MQTT
         const mqttOptions = {
-            clientId: `pet-feeder-${macAddress}-${Math.random().toString(16).substring(2, 8)}`,
-            username: "moy19",
-            password: "moy19",
+            clientId: `pet-feeder-${macAddress}-${Math.random().toString(16).substr(2, 8)}`,
+            username: process.env.REACT_APP_MQTT_USERNAME || "moy19",
+            password: process.env.REACT_APP_MQTT_PASSWORD || "moy19",
             clean: true,
-            reconnectPeriod: 1000,
-            connectTimeout: 30 * 1000
+            reconnectPeriod: 5000,
+            connectTimeout: 10000,
+            rejectUnauthorized: false, // Solo para desarrollo
+            protocol: 'wss'
         };
 
-        // Para navegadores, usar WebSocket en lugar de TCP
-        const brokerUrl = "ws://raba7554.ala.dedicated.aws.emqxcloud.com:8083/mqtt";
+        // URL CORREGIDA con puerto 8084 para wss
+        const brokerUrl = "wss://raba7554.ala.dedicated.aws.emqxcloud.com:8084/mqtt";
+
         clientRef.current = MQTT.connect(brokerUrl, mqttOptions);
 
+        // Resto del código de conexión y manejo de eventos permanece igual
         clientRef.current.on('connect', () => {
-            console.log("Conectado al broker MQTT para alimentador de mascotas");
-            
-            // Suscribirse al tema de estado del dispositivo
+            console.log("Conectado al broker MQTT");
             const estadoTopic = `mascota/estado/${macAddress}`;
             clientRef.current.subscribe(estadoTopic, (err) => {
-                if (!err) {
-                    console.log(`Suscrito a: ${estadoTopic}`);
-                    setConectado(true);
-                } else {
-                    console.error("Error al suscribirse:", err);
+                if (err) {
+                    setError("Error al suscribirse");
                     setConectado(false);
+                } else {
+                    setConectado(true);
+                    setError(null);
                 }
             });
         });
@@ -79,53 +67,45 @@ export const useMqtt = (macAddress) => {
             if (topic === `mascota/estado/${macAddress}`) {
                 try {
                     const payload = JSON.parse(message.toString());
-                    console.log("Datos del alimentador recibidos:", payload);
-                    
-                    // Actualizar datos
                     setDatos({
                         bombaAgua: payload.bombaAgua,
                         ultimaComida: payload.ultimaComida
                     });
-                    
-                    // Actualizar tiempo del último mensaje
                     lastMessageTimeRef.current = Date.now();
-                    setConectado(true);
                 } catch (error) {
-                    console.error("Error al procesar mensaje:", error);
+                    setError("Error al procesar mensaje");
                 }
             }
         });
 
-        // Verificar desconexión por timeout
-        const intervalo = setInterval(() => {
-            if (lastMessageTimeRef.current && Date.now() - lastMessageTimeRef.current > 15000) {
-                console.log("No se han recibido mensajes en el tiempo esperado");
-                setConectado(false);
-            }
-        }, 5000);
-
         clientRef.current.on('error', (err) => {
-            console.error("Error en conexión MQTT:", err);
+            setError(`Error de conexión: ${err.message}`);
             setConectado(false);
         });
 
+        const intervalo = setInterval(() => {
+            if (lastMessageTimeRef.current && Date.now() - lastMessageTimeRef.current > 15000) {
+                setConectado(false);
+                setError("Timeout: No hay comunicación con el dispositivo");
+            }
+        }, 5000);
+
         setLoading(false);
 
-        // Limpieza
         return () => {
             clearInterval(intervalo);
             if (clientRef.current) {
                 clientRef.current.end();
-                console.log("Cliente MQTT desconectado");
             }
         };
     }, [macAddress]);
 
-    return { 
-        datos, 
-        conectado, 
-        loading, 
-        dispensarComida, 
-        controlarBombaAgua 
+    return {
+        datos,
+        conectado,
+        loading,
+        error,
+        dispensarComida,
+        controlarBombaAgua
     };
 };
