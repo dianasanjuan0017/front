@@ -1,30 +1,43 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from 'react-router-dom';
-import { useMqtt } from '../../hooks/useMqtt'; // Asegúrate de que la ruta de importación sea correcta
-import '../../styles/IoT.css';
+import { useMqtt } from './useMqtt'; // Asegúrate que la ruta sea correcta
 
 const UserDashboard = () => {
-  const { id } = useParams(); // Asumiendo que obtenemos el ID del dispositivo (MAC Address) de los parámetros de ruta
-  const macAddress = id || ""; // Usa el ID, o una cadena vacía si no está disponible
+  const { id } = useParams(); // Obtener el ID del dispositivo (MAC Address) de los parámetros
+  const macAddress = id || ""; // Usar el ID, o una cadena vacía si no está disponible
   
-  // Usar el hook MQTT modificado
-  const { datos, conectado, loading, dispensarComida, controlarBombaAgua } = useMqtt(macAddress);
+  // Usar el hook MQTT optimizado
+  const { datos, conectado, loading, error, dispensarComida, controlarBombaAgua } = useMqtt(macAddress);
   
   // Estado para los niveles del contenedor de comida y agua
-  const [foodContainerLevel, setFoodContainerLevel] = useState("full"); // lleno, medio, vacío
-  const [waterContainerLevel, setWaterContainerLevel] = useState("full"); // lleno, medio, vacío
+  const [foodContainerLevel, setFoodContainerLevel] = useState("full");
+  const [waterContainerLevel, setWaterContainerLevel] = useState("full");
   
   // Estado para los niveles del plato de comida y agua
-  const [foodBowlLevel, setFoodBowlLevel] = useState("empty"); // lleno, medio, vacío
-  const [waterBowlLevel, setWaterBowlLevel] = useState("empty"); // lleno, medio, vacío
+  const [foodBowlLevel, setFoodBowlLevel] = useState("empty");
+  const [waterBowlLevel, setWaterBowlLevel] = useState("empty");
   
   // Estado de dispensación
   const [foodDispensing, setFoodDispensing] = useState(false);
   const [waterDispensing, setWaterDispensing] = useState(false);
+  
+  // Indicador de error temporal para mostrar al usuario
+  const [actionError, setActionError] = useState("");
+
+  // Limpiar errores temporales después de un tiempo
+  useEffect(() => {
+    if (actionError) {
+      const timer = setTimeout(() => {
+        setActionError("");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionError]);
 
   // Actualizar el estado de la bomba de agua basado en los datos MQTT
   useEffect(() => {
     if (!loading && datos) {
+      // Actualizar estado de dispensación de agua
       setWaterDispensing(datos.bombaAgua);
       
       // Si la bomba está activa, simular llenado del plato
@@ -33,20 +46,35 @@ const UserDashboard = () => {
         setWaterBowlLevel(nextLevel);
       }
     }
-  }, [datos, loading]);
+  }, [datos, loading, waterBowlLevel]);
 
   // Manejar la dispensación de comida
   const handleDispenseFood = () => {
-    if (foodContainerLevel === "empty" || !conectado) return;
+    // Validar condiciones
+    if (foodContainerLevel === "empty") {
+      setActionError("El contenedor de comida está vacío");
+      return;
+    }
     
+    if (!conectado) {
+      setActionError("No hay conexión con el dispositivo");
+      return;
+    }
+    
+    if (foodDispensing) {
+      setActionError("Ya se está dispensando comida");
+      return;
+    }
+    
+    // Activar indicador visual inmediatamente
     setFoodDispensing(true);
+    
     // Intentar dispensar comida a través de MQTT
     const success = dispensarComida();
     
     if (success) {
-      // Simular la acción de dispensación
+      // Simular la acción de dispensación con timeout
       setTimeout(() => {
-        setFoodDispensing(false);
         // Actualizar el nivel del plato basado en el nivel actual
         if (foodBowlLevel === "empty") {
           setFoodBowlLevel("medium");
@@ -60,26 +88,41 @@ const UserDashboard = () => {
         } else if (foodContainerLevel === "medium") {
           setFoodContainerLevel("empty");
         }
+        
+        // Desactivar indicador de dispensación
+        setFoodDispensing(false);
       }, 3000);
     } else {
+      // Si hay error, restaurar estado y mostrar mensaje
       setFoodDispensing(false);
-      console.error("Error al enviar comando de dispensar comida");
+      setActionError("Error al enviar comando de comida");
     }
   };
 
   // Manejar la dispensación de agua
   const handleDispenseWater = () => {
-    if (waterContainerLevel === "empty" || !conectado) return;
+    // Validar condiciones
+    if (waterContainerLevel === "empty") {
+      setActionError("El contenedor de agua está vacío");
+      return;
+    }
     
-    // Si no está dispensando agua, activar
+    if (!conectado) {
+      setActionError("No hay conexión con el dispositivo");
+      return;
+    }
+    
+    // Alternar estado de dispensación
     if (!waterDispensing) {
-      // Intentar activar bomba de agua a través de MQTT
+      // Activar bomba
       const success = controlarBombaAgua(true);
       
       if (success) {
+        // El estado real se actualizará mediante MQTT, pero activamos
+        // el indicador visual inmediatamente para feedback al usuario
         setWaterDispensing(true);
         
-        // Actualizar el nivel del plato basado en el nivel actual después de un tiempo
+        // Simulación del llenado del plato (en un caso real, esto vendría del estado del dispositivo)
         setTimeout(() => {
           if (waterBowlLevel === "empty") {
             setWaterBowlLevel("medium");
@@ -87,18 +130,23 @@ const UserDashboard = () => {
             setWaterBowlLevel("full");
           }
           
-          // Actualizar el nivel del contenedor
+          // Simulación del vaciado del contenedor
           if (waterContainerLevel === "full") {
             setWaterContainerLevel("medium");
           } else if (waterContainerLevel === "medium") {
             setWaterContainerLevel("empty");
           }
         }, 2000);
+      } else {
+        setActionError("Error al activar bomba de agua");
       }
     } else {
-      // Si ya está dispensando, desactivar
-      controlarBombaAgua(false);
-      setWaterDispensing(false);
+      // Desactivar bomba
+      const success = controlarBombaAgua(false);
+      if (!success) {
+        setActionError("Error al desactivar bomba de agua");
+      }
+      // El estado real se actualizará mediante MQTT
     }
   };
 
@@ -127,6 +175,10 @@ const UserDashboard = () => {
           </span>
         </p>
         {macAddress && <p className="IoT-device-id">ID: {macAddress}</p>}
+        
+        {/* Mostrar errores */}
+        {error && <p className="IoT-error-message">Error de conexión: {error}</p>}
+        {actionError && <p className="IoT-action-error">{actionError}</p>}
       </div>
 
       <div className="IoT-devices-container">
