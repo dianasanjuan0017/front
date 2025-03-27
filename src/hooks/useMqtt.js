@@ -30,7 +30,6 @@ export const useMqtt = (macAddress) => {
         }
         
         try {
-            // Sin QoS para simplificar
             clientRef.current.publish(`mascota/comida/${macAddress}`, "dispensar");
             logDebug(`Publicado en mascota/comida/${macAddress}: dispensar`, 'success');
             return true;
@@ -48,7 +47,6 @@ export const useMqtt = (macAddress) => {
         
         try {
             const message = activar ? "activar" : "desactivar";
-            // Sin QoS para simplificar
             clientRef.current.publish(`mascota/agua/${macAddress}`, message);
             logDebug(`Publicado en mascota/agua/${macAddress}: ${message}`, 'success');
             return true;
@@ -80,18 +78,16 @@ export const useMqtt = (macAddress) => {
         
         // Configuración base para MQTT
         const mqttConfig = {
-            // IMPORTANTE: Usar credenciales alineadas con el ESP32
             username: "esp32",
             password: "esp32",
             clientId: `web-${macAddress}-${Math.random().toString(16).substr(2, 8)}-${connectionAttemptRef.current}`,
             clean: true,
-            reconnectPeriod: 10000,
+            reconnectPeriod: 5000,
             connectTimeout: 30000,
             rejectUnauthorized: false // Ignora errores de certificados
         };
 
-        // IMPORTANTE: Usar WebSocket normal (no seguro) - puerto 8083
-        // Este es el puerto más común para WebSockets en EMQX
+        // Intentar primero con WebSocket normal (WS) - puerto 8083
         const brokerUrl = "ws://raba7554.ala.dedicated.aws.emqxcloud.com:8083/mqtt";
         
         logDebug(`Intentando conectar a: ${brokerUrl}`, 'info');
@@ -106,19 +102,22 @@ export const useMqtt = (macAddress) => {
                 setConectado(true);
                 setError(null);
                 
-                // Suscribirse al tópico de estado
-                const estadoTopic = `mascota/estado/${macAddress}`;
-                clientRef.current.subscribe(estadoTopic, (err) => {
-                    if (err) {
-                        logDebug(`Error al suscribirse a ${estadoTopic}: ${err.message}`, 'error');
-                    } else {
-                        logDebug(`Suscrito a ${estadoTopic}`, 'success');
-                    }
+                // Suscribirse a los tópicos
+                const topics = [
+                    `mascota/estado/${macAddress}`,
+                    `mascota/confirmacion/${macAddress}`,
+                    `mascota/pong/${macAddress}`
+                ];
+
+                topics.forEach(topic => {
+                    clientRef.current.subscribe(topic, (err) => {
+                        if (err) {
+                            logDebug(`Error al suscribirse a ${topic}: ${err.message}`, 'error');
+                        } else {
+                            logDebug(`Suscrito a ${topic}`, 'success');
+                        }
+                    });
                 });
-                
-                // También suscribirse al tópico de confirmación
-                const confirmacionTopic = `mascota/confirmacion/${macAddress}`;
-                clientRef.current.subscribe(confirmacionTopic);
 
                 // Enviar ping inicial para verificar que el dispositivo está online
                 clientRef.current.publish(
@@ -127,10 +126,26 @@ export const useMqtt = (macAddress) => {
                 );
             });
 
+            clientRef.current.on('reconnect', () => {
+                logDebug("Reconectando al broker MQTT...", 'warning');
+                setConectado(false);
+            });
+
+            clientRef.current.on('offline', () => {
+                logDebug("Cliente MQTT desconectado", 'warning');
+                setConectado(false);
+            });
+
+            clientRef.current.on('error', (err) => {
+                logDebug(`Error MQTT: ${err.message}`, 'error');
+                setError(`Error de conexión: ${err.message}`);
+            });
+
             clientRef.current.on('message', (topic, message) => {
                 const messageStr = message.toString();
                 logDebug(`Mensaje recibido [${topic}]: ${messageStr}`, 'info');
                 
+                // Procesar mensaje según el tópico
                 if (topic === `mascota/estado/${macAddress}`) {
                     try {
                         const payload = JSON.parse(messageStr);
@@ -141,24 +156,22 @@ export const useMqtt = (macAddress) => {
                         lastMessageTimeRef.current = Date.now();
                     } catch (error) {
                         logDebug(`Error al parsear mensaje JSON: ${error.message}`, 'error');
-                        setError("Error al procesar mensaje");
+                    }
+                } 
+                else if (topic === `mascota/pong/${macAddress}`) {
+                    logDebug("Dispositivo confirmó estar online", 'success');
+                    lastMessageTimeRef.current = Date.now();
+                }
+                else if (topic === `mascota/confirmacion/${macAddress}`) {
+                    logDebug(`Confirmación de acción: ${messageStr}`, 'success');
+                    
+                    // Actualizar estado si el mensaje es sobre la bomba de agua
+                    if (messageStr === "agua:activada") {
+                        setDatos(prevData => ({...prevData, bombaAgua: true}));
+                    } else if (messageStr === "agua:desactivada") {
+                        setDatos(prevData => ({...prevData, bombaAgua: false}));
                     }
                 }
-            });
-
-            clientRef.current.on('error', (err) => {
-                logDebug(`Error MQTT: ${err.message}`, 'error');
-                setError(`Error de conexión: ${err.message}`);
-            });
-
-            clientRef.current.on('close', () => {
-                logDebug("Conexión MQTT cerrada", 'warning');
-                setConectado(false);
-            });
-            
-            clientRef.current.on('offline', () => {
-                logDebug("Cliente MQTT desconectado", 'warning');
-                setConectado(false);
             });
             
         } catch (err) {
@@ -168,16 +181,27 @@ export const useMqtt = (macAddress) => {
 
         // Verificación periódica de la comunicación
         const intervalo = setInterval(() => {
-            if (lastMessageTimeRef.current && Date.now() - lastMessageTimeRef.current > 15000) {
-                if (clientRef.current && clientRef.current.connected) {
-                    logDebug("Sin mensajes recientes del dispositivo", 'warning');
-                    setError("Sin comunicación con el dispositivo");
-                } else {
-                    logDebug("Conexión MQTT perdida", 'warning');
-                    setConectado(false);
+            if (clientRef.current && clientRef.current.connected) {
+                if (!lastMessageTimeRef.current || Date.now() - lastMessageTimeRef.current > 15000) {
+                    logDebug("Enviando ping para verificar dispositivo", 'info');
+                    
+                    // Enviar ping para verificar que el dispositivo sigue online
+                    clientRef.current.publish(
+                        `mascota/ping/${macAddress}`,
+                        "web-client-ping"
+                    );
+                    
+                    // Si no hay respuesta en demasiado tiempo, mostrar advertencia
+                    if (lastMessageTimeRef.current && Date.now() - lastMessageTimeRef.current > 30000) {
+                        logDebug("Sin respuesta del dispositivo por más de 30 segundos", 'warning');
+                        setError("Sin comunicación con el dispositivo");
+                    }
                 }
+            } else {
+                logDebug("Conexión MQTT perdida o no establecida", 'warning');
+                setConectado(false);
             }
-        }, 5000);
+        }, 10000); // Verificar cada 10 segundos
 
         setLoading(false);
 
@@ -186,6 +210,14 @@ export const useMqtt = (macAddress) => {
             clearInterval(intervalo);
             
             if (clientRef.current) {
+                // Enviar mensaje de desconexión
+                if (clientRef.current.connected) {
+                    clientRef.current.publish(
+                        `mascota/web/${macAddress}`,
+                        JSON.stringify({status: "disconnected", timestamp: Date.now()})
+                    );
+                }
+                
                 clientRef.current.end();
             }
         };
