@@ -26,11 +26,7 @@ export const useMqtt = (macAddress) => {
         const prefix = type === 'error' ? '❌ ' : 
                       type === 'success' ? '✅ ' : 
                       type === 'warning' ? '⚠ ' : 'ℹ ';
-<<<<<<< HEAD
         console.log(`${prefix} MQTT [${type}]: ${message}`);
-=======
-        console.log(${prefix} MQTT [${type}]: ${message});
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
     };
 
     // Funciones de control mejoradas con manejo de errores
@@ -41,19 +37,11 @@ export const useMqtt = (macAddress) => {
         }
         
         try {
-<<<<<<< HEAD
             clientRef.current.publish(`mascota/comida/${macAddress}`, "dispensar");
             logDebug(`Publicado en mascota/comida/${macAddress}: dispensar`, 'success');
             return true;
         } catch (err) {
             logDebug(`Error al publicar mensaje de comida: ${err.message}`, 'error');
-=======
-            clientRef.current.publish(mascota/comida/${macAddress}, "dispensar");
-            logDebug(Publicado en mascota/comida/${macAddress}: dispensar, 'success');
-            return true;
-        } catch (err) {
-            logDebug(Error al publicar mensaje de comida: ${err.message}, 'error');
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
             return false;
         }
     };
@@ -66,19 +54,11 @@ export const useMqtt = (macAddress) => {
         
         try {
             const message = activar ? "activar" : "desactivar";
-<<<<<<< HEAD
             clientRef.current.publish(`mascota/agua/${macAddress}`, message);
             logDebug(`Publicado en mascota/agua/${macAddress}: ${message}`, 'success');
             return true;
         } catch (err) {
             logDebug(`Error al publicar mensaje de agua: ${err.message}`, 'error');
-=======
-            clientRef.current.publish(mascota/agua/${macAddress}, message);
-            logDebug(Publicado en mascota/agua/${macAddress}: ${message}, 'success');
-            return true;
-        } catch (err) {
-            logDebug(Error al publicar mensaje de agua: ${err.message}, 'error');
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
             return false;
         }
     };
@@ -91,11 +71,7 @@ export const useMqtt = (macAddress) => {
             return;
         }
 
-<<<<<<< HEAD
         logDebug(`Iniciando conexión MQTT para dispositivo: ${macAddress}`, 'info');
-=======
-        logDebug(Iniciando conexión MQTT para dispositivo: ${macAddress}, 'info');
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
 
         // Cerrar cualquier conexión existente
         if (clientRef.current) {
@@ -111,11 +87,7 @@ export const useMqtt = (macAddress) => {
         const mqttConfig = {
             username: "esp32",
             password: "esp32",
-<<<<<<< HEAD
             clientId: `web-${macAddress}-${Math.random().toString(16).substr(2, 8)}-${connectionAttemptRef.current}`,
-=======
-            clientId: web-${macAddress}-${Math.random().toString(16).substr(2, 8)}-${connectionAttemptRef.current},
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
             clean: true,
             reconnectPeriod: 5000,
             connectTimeout: 30000,
@@ -125,11 +97,7 @@ export const useMqtt = (macAddress) => {
         // Intentar primero con WebSocket normal (WS) - puerto 8083
         const brokerUrl = "ws://raba7554.ala.dedicated.aws.emqxcloud.com:8083/mqtt";
         
-<<<<<<< HEAD
         logDebug(`Intentando conectar a: ${brokerUrl}`, 'info');
-=======
-        logDebug(Intentando conectar a: ${brokerUrl}, 'info');
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
         
         try {
             // Crear cliente MQTT
@@ -137,50 +105,30 @@ export const useMqtt = (macAddress) => {
             
             // Configurar handlers de eventos
             clientRef.current.on('connect', () => {
-<<<<<<< HEAD
                 logDebug(`Conectado al broker MQTT: ${brokerUrl}`, 'success');
-=======
-                logDebug(Conectado al broker MQTT: ${brokerUrl}, 'success');
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                 setConectado(true);
                 setError(null);
                 
                 // Suscribirse a los tópicos
                 const topics = [
-<<<<<<< HEAD
                     `mascota/estado/${macAddress}`,
                     `mascota/confirmacion/${macAddress}`,
                     `mascota/pong/${macAddress}`
-=======
-                    mascota/estado/${macAddress},
-                    mascota/confirmacion/${macAddress},
-                    mascota/pong/${macAddress}
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                 ];
 
                 topics.forEach(topic => {
                     clientRef.current.subscribe(topic, (err) => {
                         if (err) {
-<<<<<<< HEAD
                             logDebug(`Error al suscribirse a ${topic}: ${err.message}`, 'error');
                         } else {
                             logDebug(`Suscrito a ${topic}`, 'success');
-=======
-                            logDebug(Error al suscribirse a ${topic}: ${err.message}, 'error');
-                        } else {
-                            logDebug(Suscrito a ${topic}, 'success');
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                         }
                     });
                 });
 
                 // Enviar ping inicial para verificar que el dispositivo está online
                 clientRef.current.publish(
-<<<<<<< HEAD
                     `mascota/ping/${macAddress}`,
-=======
-                    mascota/ping/${macAddress},
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                     "web-client-ping"
                 );
             });
@@ -196,28 +144,16 @@ export const useMqtt = (macAddress) => {
             });
 
             clientRef.current.on('error', (err) => {
-<<<<<<< HEAD
                 logDebug(`Error MQTT: ${err.message}`, 'error');
                 setError(`Error de conexión: ${err.message}`);
-=======
-                logDebug(Error MQTT: ${err.message}, 'error');
-                setError(Error de conexión: ${err.message});
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
             });
 
             clientRef.current.on('message', (topic, message) => {
                 const messageStr = message.toString();
-<<<<<<< HEAD
                 logDebug(`Mensaje recibido [${topic}]: ${messageStr}`, 'info');
                 
                 // Procesar mensaje según el tópico
                 if (topic === `mascota/estado/${macAddress}`) {
-=======
-                logDebug(Mensaje recibido [${topic}]: ${messageStr}, 'info');
-                
-                // Procesar mensaje según el tópico
-                if (topic === mascota/estado/${macAddress}) {
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                     try {
                         const payload = JSON.parse(messageStr);
                         
@@ -239,7 +175,6 @@ export const useMqtt = (macAddress) => {
                         
                         lastMessageTimeRef.current = Date.now();
                     } catch (error) {
-<<<<<<< HEAD
                         logDebug(`Error al parsear mensaje JSON: ${error.message}`, 'error');
                     }
                 } 
@@ -249,17 +184,6 @@ export const useMqtt = (macAddress) => {
                 }
                 else if (topic === `mascota/confirmacion/${macAddress}`) {
                     logDebug(`Confirmación de acción: ${messageStr}`, 'success');
-=======
-                        logDebug(Error al parsear mensaje JSON: ${error.message}, 'error');
-                    }
-                } 
-                else if (topic === mascota/pong/${macAddress}) {
-                    logDebug("Dispositivo confirmó estar online", 'success');
-                    lastMessageTimeRef.current = Date.now();
-                }
-                else if (topic === mascota/confirmacion/${macAddress}) {
-                    logDebug(Confirmación de acción: ${messageStr}, 'success');
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                     
                     // Actualizar estado si el mensaje es sobre la bomba de agua
                     if (messageStr === "agua:activada") {
@@ -271,13 +195,8 @@ export const useMqtt = (macAddress) => {
             });
             
         } catch (err) {
-<<<<<<< HEAD
             logDebug(`Error al crear cliente MQTT: ${err.message}`, 'error');
             setError(`Error al inicializar conexión: ${err.message}`);
-=======
-            logDebug(Error al crear cliente MQTT: ${err.message}, 'error');
-            setError(Error al inicializar conexión: ${err.message});
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
         }
 
         // Verificación periódica de la comunicación
@@ -288,11 +207,7 @@ export const useMqtt = (macAddress) => {
                     
                     // Enviar ping para verificar que el dispositivo sigue online
                     clientRef.current.publish(
-<<<<<<< HEAD
                         `mascota/ping/${macAddress}`,
-=======
-                        mascota/ping/${macAddress},
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                         "web-client-ping"
                     );
                     
@@ -318,11 +233,7 @@ export const useMqtt = (macAddress) => {
                 // Enviar mensaje de desconexión
                 if (clientRef.current.connected) {
                     clientRef.current.publish(
-<<<<<<< HEAD
                         `mascota/web/${macAddress}`,
-=======
-                        mascota/web/${macAddress},
->>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                         JSON.stringify({status: "disconnected", timestamp: Date.now()})
                     );
                 }
