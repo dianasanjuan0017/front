@@ -96,7 +96,7 @@ export const useMqtt = (macAddress) => {
 
         // Usar WebSocket Seguro (WSS) en lugar de WS para evitar el bloqueo de contenido mixto
         const brokerUrl = "wss://raba7554.ala.dedicated.aws.emqxcloud.com:8084/mqtt";
-        
+
         logDebug(`Intentando conectar a: ${brokerUrl}`, 'info');
         
         try {
