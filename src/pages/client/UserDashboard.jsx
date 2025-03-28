@@ -9,20 +9,22 @@ const UserDashboard = () => {
   // Usar el hook MQTT optimizado
   const { datos, conectado, loading, error, dispensarComida, controlarBombaAgua } = useMqtt(macAddress);
   
-  // Estado para los niveles del contenedor de comida y agua
-  const [foodContainerLevel, setFoodContainerLevel] = useState("full");
-  const [waterContainerLevel, setWaterContainerLevel] = useState("full");
-  
   // Estado para los niveles del plato de comida y agua
   const [foodBowlLevel, setFoodBowlLevel] = useState("empty");
   const [waterBowlLevel, setWaterBowlLevel] = useState("empty");
   
   // Estado de dispensación
   const [foodDispensing, setFoodDispensing] = useState(false);
-  const [waterDispensing, setWaterDispensing] = useState(false);
   
   // Indicador de error temporal para mostrar al usuario
   const [actionError, setActionError] = useState("");
+
+  // Función para convertir valores numéricos a niveles visuales (empty, medium, full)
+  const determinarNivelContenedor = (peso, umbralBajo, umbralAlto) => {
+    if (!peso || peso <= umbralBajo) return "empty";
+    if (peso > umbralBajo && peso < umbralAlto) return "medium";
+    return "full";
+  };
 
   // Limpiar errores temporales después de un tiempo
   useEffect(() => {
@@ -34,16 +36,34 @@ const UserDashboard = () => {
     }
   }, [actionError]);
 
-  // Actualizar el estado de la bomba de agua basado en los datos MQTT
+  // Actualizar el estado basado en los datos MQTT
   useEffect(() => {
     if (!loading && datos) {
       // Actualizar estado de dispensación de agua
-      setWaterDispensing(datos.bombaAgua);
+      setFoodDispensing(false); // Reset food dispensing if needed
       
-      // Si la bomba está activa, simular llenado del plato
+      // Si la bomba está activa, actualizar estado del plato de agua
       if (datos.bombaAgua && waterBowlLevel !== "full") {
         const nextLevel = waterBowlLevel === "empty" ? "medium" : "full";
         setWaterBowlLevel(nextLevel);
+      }
+      
+      // Actualizar plato de comida basado en los datos de los sensores
+      if (datos.platoComidaLleno) {
+        setFoodBowlLevel("full");
+      } else if (datos.pesoComida > 20) { // Umbral para nivel medio
+        setFoodBowlLevel("medium");
+      } else {
+        setFoodBowlLevel("empty");
+      }
+      
+      // Actualizar plato de agua basado en los datos de los sensores
+      if (datos.platoAguaLleno) {
+        setWaterBowlLevel("full");
+      } else if (datos.pesoAgua > 40) { // Umbral para nivel medio
+        setWaterBowlLevel("medium");
+      } else {
+        setWaterBowlLevel("empty");
       }
     }
   }, [datos, loading, waterBowlLevel]);
@@ -51,7 +71,7 @@ const UserDashboard = () => {
   // Manejar la dispensación de comida
   const handleDispenseFood = () => {
     // Validar condiciones
-    if (foodContainerLevel === "empty") {
+    if (!datos.pesoComida || datos.pesoComida < 10) {
       setActionError("El contenedor de comida está vacío");
       return;
     }
@@ -73,23 +93,9 @@ const UserDashboard = () => {
     const success = dispensarComida();
     
     if (success) {
-      // Simular la acción de dispensación con timeout
+      // La respuesta real vendrá por MQTT, pero mantenemos el indicador
+      // visual por un tiempo para dar feedback al usuario
       setTimeout(() => {
-        // Actualizar el nivel del plato basado en el nivel actual
-        if (foodBowlLevel === "empty") {
-          setFoodBowlLevel("medium");
-        } else if (foodBowlLevel === "medium") {
-          setFoodBowlLevel("full");
-        }
-        
-        // Actualizar el nivel del contenedor
-        if (foodContainerLevel === "full") {
-          setFoodContainerLevel("medium");
-        } else if (foodContainerLevel === "medium") {
-          setFoodContainerLevel("empty");
-        }
-        
-        // Desactivar indicador de dispensación
         setFoodDispensing(false);
       }, 3000);
     } else {
@@ -102,7 +108,7 @@ const UserDashboard = () => {
   // Manejar la dispensación de agua
   const handleDispenseWater = () => {
     // Validar condiciones
-    if (waterContainerLevel === "empty") {
+    if (!datos.pesoAgua || datos.pesoAgua < 20) {
       setActionError("El contenedor de agua está vacío");
       return;
     }
@@ -113,49 +119,22 @@ const UserDashboard = () => {
     }
     
     // Alternar estado de dispensación
-    if (!waterDispensing) {
-      // Activar bomba
-      const success = controlarBombaAgua(true);
-      
-      if (success) {
-        // El estado real se actualizará mediante MQTT, pero activamos
-        // el indicador visual inmediatamente para feedback al usuario
-        setWaterDispensing(true);
-        
-        // Simulación del llenado del plato (en un caso real, esto vendría del estado del dispositivo)
-        setTimeout(() => {
-          if (waterBowlLevel === "empty") {
-            setWaterBowlLevel("medium");
-          } else if (waterBowlLevel === "medium") {
-            setWaterBowlLevel("full");
-          }
-          
-          // Simulación del vaciado del contenedor
-          if (waterContainerLevel === "full") {
-            setWaterContainerLevel("medium");
-          } else if (waterContainerLevel === "medium") {
-            setWaterContainerLevel("empty");
-          }
-        }, 2000);
-      } else {
-        setActionError("Error al activar bomba de agua");
-      }
-    } else {
-      // Desactivar bomba
-      const success = controlarBombaAgua(false);
-      if (!success) {
-        setActionError("Error al desactivar bomba de agua");
-      }
-      // El estado real se actualizará mediante MQTT
+    const success = controlarBombaAgua(!datos.bombaAgua);
+    
+    if (!success) {
+      setActionError(Error al ${datos.bombaAgua ? 'desactivar' : 'activar'} bomba de agua);
     }
+    // El estado real se actualizará mediante MQTT
   };
 
   // Reiniciar el plato de comida (simulando que la mascota come)
+  // Esto es solo para la interfaz, no afecta al dispositivo real
   const resetFoodBowl = () => {
     setFoodBowlLevel("empty");
   };
 
   // Reiniciar el plato de agua (simulando que la mascota bebe)
+  // Esto es solo para la interfaz, no afecta al dispositivo real
   const resetWaterBowl = () => {
     setWaterBowlLevel("empty");
   };
@@ -164,13 +143,17 @@ const UserDashboard = () => {
     return <div className="IoT-loading">Cargando datos del dispositivo...</div>;
   }
 
+  // Determinar niveles de contenedores basados en los valores de los sensores
+  const foodContainerLevel = determinarNivelContenedor(datos.pesoComida, 20, 100);
+  const waterContainerLevel = determinarNivelContenedor(datos.pesoAgua, 40, 200);
+
   return (
     <div className="IoT-feeder-container">
       <div className="IoT-feeder-header">
         <h1>Panel de Control del Alimentador de Mascotas</h1>
         <p className="IoT-feeder-subtitle">
           Monitorea y controla la comida y agua de tu mascota
-          <span className={`IoT-connection-status ${conectado ? 'IoT-connected' : 'IoT-disconnected'}`}>
+          <span className={IoT-connection-status ${conectado ? 'IoT-connected' : 'IoT-disconnected'}}>
             {conectado ? '• Conectado' : '• Desconectado'}
           </span>
         </p>
@@ -185,13 +168,13 @@ const UserDashboard = () => {
         {/* Tarjeta del Dispensador de Comida */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
-            <div className={`IoT-food-icon ${foodDispensing ? 'IoT-active' : ''}`}></div>
+            <div className={IoT-food-icon ${foodDispensing ? 'IoT-active' : ''}}></div>
           </div>
           <div className="IoT-device-info">
             <h2>Dispensador de Comida</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Estado:</span>
-              <span className={`IoT-status-badge ${foodDispensing ? 'IoT-active' : 'IoT-inactive'}`}>
+              <span className={IoT-status-badge ${foodDispensing ? 'IoT-active' : 'IoT-inactive'}}>
                 {foodDispensing ? 'Dispensando' : 'Inactivo'}
               </span>
             </div>
@@ -210,14 +193,14 @@ const UserDashboard = () => {
         {/* Tarjeta del Dispensador de Agua */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
-            <div className={`IoT-water-icon ${waterDispensing ? 'IoT-active' : ''}`}></div>
+            <div className={IoT-water-icon ${datos.bombaAgua ? 'IoT-active' : ''}}></div>
           </div>
           <div className="IoT-device-info">
             <h2>Dispensador de Agua</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Estado:</span>
-              <span className={`IoT-status-badge ${waterDispensing ? 'IoT-active' : 'IoT-inactive'}`}>
-                {waterDispensing ? 'Dispensando' : 'Inactivo'}
+              <span className={IoT-status-badge ${datos.bombaAgua ? 'IoT-active' : 'IoT-inactive'}}>
+                {datos.bombaAgua ? 'Dispensando' : 'Inactivo'}
               </span>
             </div>
             <div className="IoT-control-buttons">
@@ -226,7 +209,7 @@ const UserDashboard = () => {
                 onClick={handleDispenseWater}
                 disabled={waterContainerLevel === "empty" || !conectado}
               >
-                {waterDispensing ? 'Detener' : 'Dispensar Agua'}
+                {datos.bombaAgua ? 'Detener' : 'Dispensar Agua'}
               </button>
             </div>
           </div>
@@ -238,17 +221,21 @@ const UserDashboard = () => {
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-container-icon IoT-food-container">
-              <div className={`IoT-level-indicator IoT-${foodContainerLevel}`}></div>
+              <div className={IoT-level-indicator IoT-${foodContainerLevel}}></div>
             </div>
           </div>
           <div className="IoT-device-info">
             <h2>Contenedor de Comida</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${foodContainerLevel}`}>
+              <span className={IoT-level-badge IoT-${foodContainerLevel}}>
                 {foodContainerLevel.charAt(0).toUpperCase() + foodContainerLevel.slice(1)}
+                {datos.pesoComida ? ` (${datos.pesoComida.toFixed(1)}g)` : ''}
               </span>
             </div>
+            {!datos.balanzaComidaLista && (
+              <p className="IoT-sensor-warning">Sensor de peso no disponible</p>
+            )}
           </div>
         </div>
 
@@ -256,17 +243,21 @@ const UserDashboard = () => {
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-container-icon IoT-water-container">
-              <div className={`IoT-level-indicator IoT-${waterContainerLevel}`}></div>
+              <div className={IoT-level-indicator IoT-${waterContainerLevel}}></div>
             </div>
           </div>
           <div className="IoT-device-info">
             <h2>Contenedor de Agua</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${waterContainerLevel}`}>
+              <span className={IoT-level-badge IoT-${waterContainerLevel}}>
                 {waterContainerLevel.charAt(0).toUpperCase() + waterContainerLevel.slice(1)}
+                {datos.pesoAgua ? ` (${datos.pesoAgua.toFixed(1)}g)` : ''}
               </span>
             </div>
+            {!datos.balanzaAguaLista && (
+              <p className="IoT-sensor-warning">Sensor de peso no disponible</p>
+            )}
           </div>
         </div>
       </div>
@@ -276,14 +267,14 @@ const UserDashboard = () => {
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-bowl-icon IoT-food-bowl">
-              <div className={`IoT-level-indicator IoT-${foodBowlLevel}`}></div>
+              <div className={IoT-level-indicator IoT-${foodBowlLevel}}></div>
             </div>
           </div>
           <div className="IoT-device-info">
             <h2>Plato de Comida</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${foodBowlLevel}`}>
+              <span className={IoT-level-badge IoT-${foodBowlLevel}}>
                 {foodBowlLevel.charAt(0).toUpperCase() + foodBowlLevel.slice(1)}
               </span>
             </div>
@@ -303,14 +294,14 @@ const UserDashboard = () => {
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-bowl-icon IoT-water-bowl">
-              <div className={`IoT-level-indicator IoT-${waterBowlLevel}`}></div>
+              <div className={IoT-level-indicator IoT-${waterBowlLevel}}></div>
             </div>
           </div>
           <div className="IoT-device-info">
             <h2>Plato de Agua</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${waterBowlLevel}`}>
+              <span className={IoT-level-badge IoT-${waterBowlLevel}}>
                 {waterBowlLevel.charAt(0).toUpperCase() + waterBowlLevel.slice(1)}
               </span>
             </div>
@@ -326,8 +317,39 @@ const UserDashboard = () => {
           </div>
         </div>
       </div>
+      
+      {/* Sección para mostrar información adicional de los sensores */}
+      <div className="IoT-devices-container">
+        <div className="IoT-device-card IoT-sensor-info">
+          <div className="IoT-device-info">
+            <h2>Información de Sensores</h2>
+            <div className="IoT-sensor-data">
+              <p><strong>Última comida:</strong> {datos.ultimaComida ? formatTime(datos.ultimaComida) : 'No disponible'}</p>
+              <p><strong>Contenedor de comida:</strong> {datos.pesoComida ? ${datos.pesoComida.toFixed(1)}g : 'No disponible'}</p>
+              <p><strong>Contenedor de agua:</strong> {datos.pesoAgua ? ${datos.pesoAgua.toFixed(1)}g : 'No disponible'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
+};
+
+// Función auxiliar para formatear el tiempo
+const formatTime = (milliseconds) => {
+  if (!milliseconds) return 'No disponible';
+  
+  const seconds = Math.floor(milliseconds / 1000);
+  if (seconds < 60) return Hace ${seconds} segundos;
+  
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return Hace ${minutes} minutos;
+  
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return Hace ${hours} horas;
+  
+  const days = Math.floor(hours / 24);
+  return Hace ${days} días;
 };
 
 export default UserDashboard;
