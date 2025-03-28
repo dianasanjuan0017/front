@@ -20,8 +20,6 @@ export const useMqtt = (macAddress) => {
     const clientRef = useRef(null);
     const lastMessageTimeRef = useRef(null);
     const connectionAttemptRef = useRef(0);
-    const reconnectTimeoutRef = useRef(null);
-    const maxReconnectAttempts = 5;
 
     // Función para agregar logs de depuración a la consola
     const logDebug = (message, type = 'info') => {
@@ -65,20 +63,15 @@ export const useMqtt = (macAddress) => {
         }
     };
 
-    // Función para establecer conexión MQTT con reintentos
-    const setupMqttConnection = (attempt = 0) => {
-        // Limpiar cualquier intento de reconexión pendiente
-        if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current);
-            reconnectTimeoutRef.current = null;
-        }
-
-        if (attempt >= maxReconnectAttempts) {
-            logDebug(`Máximo número de intentos (${maxReconnectAttempts}) alcanzado. Deteniendo reintentos.`, 'error');
-            setError("No se pudo establecer conexión después de varios intentos");
+    useEffect(() => {
+        if (!macAddress) {
+            logDebug("MAC Address no proporcionada", 'error');
+            setError("MAC Address no proporcionada");
             setLoading(false);
             return;
         }
+
+        logDebug(`Iniciando conexión MQTT para dispositivo: ${macAddress}`, 'info');
 
         // Cerrar cualquier conexión existente
         if (clientRef.current) {
@@ -88,67 +81,36 @@ export const useMqtt = (macAddress) => {
         }
 
         // Incrementar contador de intentos
-        connectionAttemptRef.current = attempt + 1;
+        connectionAttemptRef.current += 1;
         
-        // Configuración base para MQTT con opciones adicionales para mejorar la estabilidad
+        // Configuración ajustada para EMQX
+        const clientId = `web-${macAddress}-${Math.random().toString(16).substring(2, 10)}`;
         const mqttConfig = {
             username: "esp32",
             password: "esp32",
-            clientId: `web-${macAddress}-${Math.random().toString(16).substr(2, 8)}-${connectionAttemptRef.current}`,
+            clientId: clientId,
             clean: true,
-            reconnectPeriod: 5000,
-            connectTimeout: 30000,
-            keepalive: 60,
-            rejectUnauthorized: false, // Ignora errores de certificados
-            protocolVersion: 4, // Asegura el uso de MQTT v3.1.1
-            protocolId: 'MQTT',
-            will: { // Mensaje Last Will and Testament para detectar desconexiones abruptas
-                topic: `mascota/web/${macAddress}/estado`,
-                payload: JSON.stringify({status: "disconnected_unexpectedly", timestamp: Date.now()}),
-                qos: 1,
-                retain: false
-            }
+            reconnectPeriod: 3000,
+            connectTimeout: 10000,
+            keepalive: 30,
+            rejectUnauthorized: false,
+            // Evitar protocolo MQTT v5 que puede causar problemas
+            protocolVersion: 4,
+            protocolId: 'MQTT'
         };
 
-        // Definir las URLs para intentar, primero WSS, luego WS como fallback
-        const brokerUrls = [
-            // Intento 1: WSS estándar puerto 8084
-            "wss://raba7554.ala.dedicated.aws.emqxcloud.com:8084/mqtt",
-            // Intento 2: WSS estándar en puerto alternativo 443 (a veces disponible)
-            "wss://raba7554.ala.dedicated.aws.emqxcloud.com:443/mqtt",
-            // Intento 3: Última opción - WS inseguro (solo si estamos en HTTP)
-            window.location.protocol === 'http:' ? "ws://raba7554.ala.dedicated.aws.emqxcloud.com:8083/mqtt" : null
-        ].filter(Boolean); // Eliminar entradas nulas
+        // URL del WebSocket seguro con path ajustado
+        const brokerUrl = "wss://raba7554.ala.dedicated.aws.emqxcloud.com:8084/mqtt";
         
-        const brokerUrl = brokerUrls[attempt % brokerUrls.length];
-        
-        logDebug(`Intento ${attempt + 1}/${maxReconnectAttempts}: Conectando a ${brokerUrl}`, 'info');
+        logDebug(`Intentando conectar a: ${brokerUrl} con clientId: ${clientId}`, 'info');
         
         try {
-            // Crear cliente MQTT
+            // Crear cliente MQTT con opciones específicas para WebSocket
             clientRef.current = MQTT.connect(brokerUrl, mqttConfig);
-            
-            // Configurar timeout para este intento
-            const connectionTimeout = setTimeout(() => {
-                if (clientRef.current && !clientRef.current.connected) {
-                    logDebug(`Timeout en intento ${attempt + 1}. Intentando siguiente opción...`, 'warning');
-                    // Forzar desconexión y probar siguiente opción
-                    if (clientRef.current) {
-                        clientRef.current.end(true);
-                        clientRef.current = null;
-                    }
-                    
-                    // Programar próximo intento con retraso exponencial
-                    const nextAttemptDelay = Math.min(1000 * Math.pow(2, attempt), 30000); // Max 30 segundos
-                    logDebug(`Programando reconexión en ${nextAttemptDelay}ms`, 'info');
-                    reconnectTimeoutRef.current = setTimeout(() => setupMqttConnection(attempt + 1), nextAttemptDelay);
-                }
-            }, 15000); // 15 segundos para cada intento
             
             // Configurar handlers de eventos
             clientRef.current.on('connect', () => {
                 logDebug(`Conectado al broker MQTT: ${brokerUrl}`, 'success');
-                clearTimeout(connectionTimeout);
                 setConectado(true);
                 setError(null);
                 
@@ -186,32 +148,17 @@ export const useMqtt = (macAddress) => {
                 setConectado(false);
             });
 
-            clientRef.current.on('close', () => {
-                logDebug("Conexión MQTT cerrada", 'warning');
-                setConectado(false);
-            });
-
             clientRef.current.on('error', (err) => {
                 logDebug(`Error MQTT: ${err.message}`, 'error');
                 setError(`Error de conexión: ${err.message}`);
                 
-                // Si hay un error que impide la conexión, intentar siguiente opción más rápido
-                if (err.message.includes('ENOTFOUND') || 
-                    err.message.includes('ECONNREFUSED') || 
-                    err.message.includes('WebSocket') ||
-                    err.message.includes('timeout')) {
-                    
-                    clearTimeout(connectionTimeout);
-                    
-                    // Desconectar cliente actual
+                // Para ciertos errores críticos, forzar la desconexión para reiniciar
+                if (err.message.includes('connack timeout') || 
+                   err.message.includes('WebSocket') ||
+                   err.message.includes('connection')) {
                     if (clientRef.current) {
                         clientRef.current.end(true);
-                        clientRef.current = null;
                     }
-                    
-                    // Programar próximo intento con retraso mínimo
-                    logDebug("Error de conexión crítico. Intentando siguiente opción...", 'warning');
-                    reconnectTimeoutRef.current = setTimeout(() => setupMqttConnection(attempt + 1), 1000);
                 }
             });
 
@@ -264,24 +211,7 @@ export const useMqtt = (macAddress) => {
         } catch (err) {
             logDebug(`Error al crear cliente MQTT: ${err.message}`, 'error');
             setError(`Error al inicializar conexión: ${err.message}`);
-            
-            // Programar próximo intento
-            reconnectTimeoutRef.current = setTimeout(() => setupMqttConnection(attempt + 1), 2000);
         }
-    };
-
-    useEffect(() => {
-        if (!macAddress) {
-            logDebug("MAC Address no proporcionada", 'error');
-            setError("MAC Address no proporcionada");
-            setLoading(false);
-            return;
-        }
-
-        logDebug(`Iniciando conexión MQTT para dispositivo: ${macAddress}`, 'info');
-        
-        // Iniciar proceso de conexión
-        setupMqttConnection(0);
 
         // Verificación periódica de la comunicación
         const intervalo = setInterval(() => {
@@ -304,12 +234,6 @@ export const useMqtt = (macAddress) => {
             } else {
                 logDebug("Conexión MQTT perdida o no establecida", 'warning');
                 setConectado(false);
-                
-                // Reintentar conexión automáticamente si se pierde
-                if (connectionAttemptRef.current < maxReconnectAttempts && !reconnectTimeoutRef.current) {
-                    logDebug("Programando reconexión automática...", 'info');
-                    reconnectTimeoutRef.current = setTimeout(() => setupMqttConnection(0), 5000);
-                }
             }
         }, 10000); // Verificar cada 10 segundos
 
@@ -318,11 +242,6 @@ export const useMqtt = (macAddress) => {
         return () => {
             logDebug("Limpiando recursos MQTT", 'info');
             clearInterval(intervalo);
-            
-            // Limpiar timeout de reconexión si existe
-            if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
-            }
             
             if (clientRef.current) {
                 // Enviar mensaje de desconexión
@@ -347,3 +266,4 @@ export const useMqtt = (macAddress) => {
         controlarBombaAgua
     };
 };
+
