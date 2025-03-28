@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from 'react-router-dom';
 import { useMqtt } from '../../hooks/useMqtt';
+import '../../styles/IoT.css'
 
 const UserDashboard = () => {
   const { id } = useParams(); // Obtener el ID del dispositivo (MAC Address) de los parámetros
