@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from 'react-router-dom';
 import { useMqtt } from '../../hooks/useMqtt';
+<<<<<<< HEAD
  // Asegúrate que la ruta sea correcta
+=======
+import '../../styles/IoT.css'
+>>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
 
 const UserDashboard = () => {
   const { id } = useParams(); // Obtener el ID del dispositivo (MAC Address) de los parámetros
@@ -123,7 +127,11 @@ const UserDashboard = () => {
     const success = controlarBombaAgua(!datos.bombaAgua);
     
     if (!success) {
+<<<<<<< HEAD
       setActionError(`Error al ${datos.bombaAgua ? 'desactivar' : 'activar'} bomba de agua`);
+=======
+      setActionError(Error al ${datos.bombaAgua ? 'desactivar' : 'activar'} bomba de agua);
+>>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
     }
     // El estado real se actualizará mediante MQTT
   };
@@ -154,7 +162,7 @@ const UserDashboard = () => {
         <h1>Panel de Control del Alimentador de Mascotas</h1>
         <p className="IoT-feeder-subtitle">
           Monitorea y controla la comida y agua de tu mascota
-          <span className={`IoT-connection-status ${conectado ? 'IoT-connected' : 'IoT-disconnected'}`}>
+          <span className={IoT-connection-status ${conectado ? 'IoT-connected' : 'IoT-disconnected'}}>
             {conectado ? '• Conectado' : '• Desconectado'}
           </span>
         </p>
@@ -169,13 +177,13 @@ const UserDashboard = () => {
         {/* Tarjeta del Dispensador de Comida */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
-            <div className={`IoT-food-icon ${foodDispensing ? 'IoT-active' : ''}`}></div>
+            <div className={IoT-food-icon ${foodDispensing ? 'IoT-active' : ''}}></div>
           </div>
           <div className="IoT-device-info">
             <h2>Dispensador de Comida</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Estado:</span>
-              <span className={`IoT-status-badge ${foodDispensing ? 'IoT-active' : 'IoT-inactive'}`}>
+              <span className={IoT-status-badge ${foodDispensing ? 'IoT-active' : 'IoT-inactive'}}>
                 {foodDispensing ? 'Dispensando' : 'Inactivo'}
               </span>
             </div>
@@ -194,13 +202,21 @@ const UserDashboard = () => {
         {/* Tarjeta del Dispensador de Agua */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
+<<<<<<< HEAD
             <div className={`IoT-water-icon ${datos.bombaAgua ? 'IoT-active' : ''}`}></div>
+=======
+            <div className={IoT-water-icon ${datos.bombaAgua ? 'IoT-active' : ''}}></div>
+>>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
           </div>
           <div className="IoT-device-info">
             <h2>Dispensador de Agua</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Estado:</span>
+<<<<<<< HEAD
               <span className={`IoT-status-badge ${datos.bombaAgua ? 'IoT-active' : 'IoT-inactive'}`}>
+=======
+              <span className={IoT-status-badge ${datos.bombaAgua ? 'IoT-active' : 'IoT-inactive'}}>
+>>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
                 {datos.bombaAgua ? 'Dispensando' : 'Inactivo'}
               </span>
             </div>
@@ -222,14 +238,14 @@ const UserDashboard = () => {
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-container-icon IoT-food-container">
-              <div className={`IoT-level-indicator IoT-${foodContainerLevel}`}></div>
+              <div className={IoT-level-indicator IoT-${foodContainerLevel}}></div>
             </div>
           </div>
           <div className="IoT-device-info">
             <h2>Contenedor de Comida</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${foodContainerLevel}`}>
+              <span className={IoT-level-badge IoT-${foodContainerLevel}}>
                 {foodContainerLevel.charAt(0).toUpperCase() + foodContainerLevel.slice(1)}
                 {datos.pesoComida ? ` (${datos.pesoComida.toFixed(1)}g)` : ''}
               </span>
@@ -244,14 +260,14 @@ const UserDashboard = () => {
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-container-icon IoT-water-container">
-              <div className={`IoT-level-indicator IoT-${waterContainerLevel}`}></div>
+              <div className={IoT-level-indicator IoT-${waterContainerLevel}}></div>
             </div>
           </div>
           <div className="IoT-device-info">
             <h2>Contenedor de Agua</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${waterContainerLevel}`}>
+              <span className={IoT-level-badge IoT-${waterContainerLevel}}>
                 {waterContainerLevel.charAt(0).toUpperCase() + waterContainerLevel.slice(1)}
                 {datos.pesoAgua ? ` (${datos.pesoAgua.toFixed(1)}g)` : ''}
               </span>
@@ -268,14 +284,14 @@ const UserDashboard = () => {
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-bowl-icon IoT-food-bowl">
-              <div className={`IoT-level-indicator IoT-${foodBowlLevel}`}></div>
+              <div className={IoT-level-indicator IoT-${foodBowlLevel}}></div>
             </div>
           </div>
           <div className="IoT-device-info">
             <h2>Plato de Comida</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${foodBowlLevel}`}>
+              <span className={IoT-level-badge IoT-${foodBowlLevel}}>
                 {foodBowlLevel.charAt(0).toUpperCase() + foodBowlLevel.slice(1)}
               </span>
             </div>
@@ -295,14 +311,14 @@ const UserDashboard = () => {
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-bowl-icon IoT-water-bowl">
-              <div className={`IoT-level-indicator IoT-${waterBowlLevel}`}></div>
+              <div className={IoT-level-indicator IoT-${waterBowlLevel}}></div>
             </div>
           </div>
           <div className="IoT-device-info">
             <h2>Plato de Agua</h2>
             <div className="IoT-status-display">
               <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${waterBowlLevel}`}>
+              <span className={IoT-level-badge IoT-${waterBowlLevel}}>
                 {waterBowlLevel.charAt(0).toUpperCase() + waterBowlLevel.slice(1)}
               </span>
             </div>
@@ -326,8 +342,13 @@ const UserDashboard = () => {
             <h2>Información de Sensores</h2>
             <div className="IoT-sensor-data">
               <p><strong>Última comida:</strong> {datos.ultimaComida ? formatTime(datos.ultimaComida) : 'No disponible'}</p>
+<<<<<<< HEAD
               <p><strong>Contenedor de comida:</strong> {datos.pesoComida ? `${datos.pesoComida.toFixed(1)}g` : 'No disponible'}</p>
               <p><strong>Contenedor de agua:</strong> {datos.pesoAgua ? `${datos.pesoAgua.toFixed(1)}g` : 'No disponible'}</p>
+=======
+              <p><strong>Contenedor de comida:</strong> {datos.pesoComida ? ${datos.pesoComida.toFixed(1)}g : 'No disponible'}</p>
+              <p><strong>Contenedor de agua:</strong> {datos.pesoAgua ? ${datos.pesoAgua.toFixed(1)}g : 'No disponible'}</p>
+>>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce
             </div>
           </div>
         </div>
@@ -341,6 +362,7 @@ const formatTime = (milliseconds) => {
   if (!milliseconds) return 'No disponible';
   
   const seconds = Math.floor(milliseconds / 1000);
+<<<<<<< HEAD
   if (seconds < 60) return `Hace ${seconds} segundos`;
   
   const minutes = Math.floor(seconds / 60);
@@ -354,3 +376,18 @@ const formatTime = (milliseconds) => {
 };
 
 export default UserDashboard;
+=======
+  if (seconds < 60) return Hace ${seconds} segundos;
+  
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return Hace ${minutes} minutos;
+  
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return Hace ${hours} horas;
+  
+  const days = Math.floor(hours / 24);
+  return Hace ${days} días;
+};
+
+export default UserDashboard;
+>>>>>>> 307b9c6ec49f2c88018ee2e733d12c16255072ce

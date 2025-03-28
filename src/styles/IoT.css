@@ -357,3 +357,74 @@
     font-size: 28px;
   }
 }
+
+/* Agregar estos estilos al CSS existente */
+
+.IoT-sensor-warning {
+  color: #dc3545;
+  font-size: 14px;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.IoT-sensor-info {
+  background: #f8f9fa;
+  border-left: 5px solid #17a2b8;
+}
+
+.IoT-sensor-data {
+  text-align: left;
+  padding: 10px;
+  background: #e9ecef;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.IoT-sensor-data p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.IoT-connection-status {
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+.IoT-connected {
+  color: #28a745;
+}
+
+.IoT-disconnected {
+  color: #dc3545;
+}
+
+.IoT-device-id {
+  font-size: 14px;
+  color: #6c757d;
+  margin-top: 5px;
+}
+
+.IoT-error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 15px;
+  text-align: center;
+}
+
+.IoT-action-error {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 15px;
+  text-align: center;
+  animation: IoT-fadeOut 3s forwards;
+}
+
+@keyframes IoT-fadeOut {
+  0% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
