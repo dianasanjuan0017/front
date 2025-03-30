@@ -11,8 +11,8 @@ const UserDashboard = () => {
   const { datos, conectado, loading, error, dispensarComida, controlarBombaAgua } = useMqtt(macAddress);
   
   // Estado para los niveles del plato de comida y agua
-  const [foodBowlLevel, setFoodBowlLevel] = useState("vacio");
-  const [waterBowlLevel, setWaterBowlLevel] = useState("vacio");
+  const [foodBowlLevel, setFoodBowlLevel] = useState("empty");
+  const [waterBowlLevel, setWaterBowlLevel] = useState("empty");
   
   // Estado de dispensación
   const [foodDispensing, setFoodDispensing] = useState(false);
@@ -20,18 +20,12 @@ const UserDashboard = () => {
   // Indicador de error temporal para mostrar al usuario
   const [actionError, setActionError] = useState("");
 
-  // Función para convertir valores numéricos a niveles visuales (vacío, medio, lleno)
-  // Usando la lógica del semáforo para determinar niveles
-  const determinarNivelContenedor = (distancia) => {
-    if (!distancia) return "vacio";
-    if (distancia >= 2 && distancia <= 10) {
-      return "lleno";
-    } else if (distancia >= 11 && distancia <= 18) {
-      return "medio";
-    } else if (distancia > 18) {
-      return "vacio";
-    }
-    return "vacio"; // Por defecto si no cumple ninguna condición
+  // Función para convertir valores numéricos a niveles visuales (empty, medium, full)
+  // CORREGIDO: Ahora valores más bajos indican "full" y valores más altos indican "empty"
+  const determinarNivelContenedor = (peso, umbralBajo, umbralAlto) => {
+    if (!peso || peso >= umbralAlto) return "empty";
+    if (peso < umbralAlto && peso > umbralBajo) return "medium";
+    return "full";
   };
 
   // Limpiar errores temporales después de un tiempo
@@ -51,35 +45,35 @@ const UserDashboard = () => {
       setFoodDispensing(false); // Reset food dispensing if needed
       
       // Si la bomba está activa, actualizar estado del plato de agua
-      if (datos.bombaAgua && waterBowlLevel !== "lleno") {
-        const nextLevel = waterBowlLevel === "vacio" ? "medio" : "lleno";
+      if (datos.bombaAgua && waterBowlLevel !== "full") {
+        const nextLevel = waterBowlLevel === "empty" ? "medium" : "full";
         setWaterBowlLevel(nextLevel);
       }
       
-      // Actualizar plato de comida basado en los datos de los sensores (usando lógica del semáforo)
+      // CORREGIDO: Actualizar plato de comida basado en los datos de los sensores (lógica invertida)
       if (datos.platoComidaLleno) {
-        setFoodBowlLevel("lleno");
+        setFoodBowlLevel("full");
+      } else if (datos.pesoComida < 80) { // Umbral para nivel medio (ahora valores más bajos indican más lleno)
+        setFoodBowlLevel("medium");
       } else {
-        // Usar la distancia como sensor para el plato de comida
-        const distanciaComida = datos.pesoComida; // Asumimos que pesoComida contiene la distancia
-        setFoodBowlLevel(determinarNivelContenedor(distanciaComida));
+        setFoodBowlLevel("empty");
       }
       
-      // Actualizar plato de agua basado en los datos de los sensores (usando lógica del semáforo)
+      // CORREGIDO: Actualizar plato de agua basado en los datos de los sensores (lógica invertida)
       if (datos.platoAguaLleno) {
-        setWaterBowlLevel("lleno");
+        setWaterBowlLevel("full");
+      } else if (datos.pesoAgua < 60) { // Umbral para nivel medio (ahora valores más bajos indican más lleno)
+        setWaterBowlLevel("medium");
       } else {
-        // Usar la distancia como sensor para el plato de agua
-        const distanciaAgua = datos.pesoAgua; // Asumimos que pesoAgua contiene la distancia
-        setWaterBowlLevel(determinarNivelContenedor(distanciaAgua));
+        setWaterBowlLevel("empty");
       }
     }
   }, [datos, loading, waterBowlLevel]);
 
   // Manejar la dispensación de comida
   const handleDispenseFood = () => {
-    // Validar condiciones según la nueva lógica de semáforo
-    if (!datos.pesoComida || datos.pesoComida > 18) {
+    // CORREGIDO: Validar condiciones (valores altos ahora indican vacío)
+    if (!datos.pesoComida || datos.pesoComida > 90) {
       setActionError("El contenedor de comida está vacío");
       return;
     }
@@ -114,56 +108,47 @@ const UserDashboard = () => {
   };
 
   // Manejar la dispensación de agua
- // Manejar la dispensación de agua
-const handleDispenseWater = () => {
-  // Validar condiciones según la nueva lógica de semáforo
-  if (!datos.pesoAgua || datos.pesoAgua > 18) {
-    setActionError("El contenedor de agua está vacío");
-    return;
-  }
-  
-  if (!conectado) {
-    setActionError("No hay conexión con el dispositivo");
-    return;
-  }
-  
-  // Similar a la dispensación de comida, activamos la bomba temporalmente
-  const success = controlarBombaAgua(true);
-  
-  if (success) {
-    // La bomba se desactivará automáticamente después de un tiempo
+  const handleDispenseWater = () => {
+    // CORREGIDO: Validar condiciones (valores altos ahora indican vacío)
+    if (!datos.pesoAgua || datos.pesoAgua > 180) {
+      setActionError("El contenedor de agua está vacío");
+      return;
+    }
+    
+    if (!conectado) {
+      setActionError("No hay conexión con el dispositivo");
+      return;
+    }
+    
+    // Alternar estado de dispensación
+    const success = controlarBombaAgua(!datos.bombaAgua);
+    
+    if (!success) {
+      setActionError(`Error al ${datos.bombaAgua ? 'desactivar' : 'activar'} bomba de agua`);
+    }
     // El estado real se actualizará mediante MQTT
-    setTimeout(() => {
-      // Opcional: podríamos desactivar explícitamente después de un tiempo
-      // controlarBombaAgua(false);
-      // Pero es mejor que el dispositivo lo maneje
-    }, 3000);
-  } else {
-    setActionError("Error al activar bomba de agua");
-  }
-};
-
+  };
 
   // Reiniciar el plato de comida (simulando que la mascota come)
   // Esto es solo para la interfaz, no afecta al dispositivo real
   const resetFoodBowl = () => {
-    setFoodBowlLevel("vacio");
+    setFoodBowlLevel("empty");
   };
 
   // Reiniciar el plato de agua (simulando que la mascota bebe)
   // Esto es solo para la interfaz, no afecta al dispositivo real
   const resetWaterBowl = () => {
-    setWaterBowlLevel("vacio");
+    setWaterBowlLevel("empty");
   };
 
   if (loading) {
     return <div className="IoT-loading">Cargando datos del dispositivo...</div>;
   }
 
-  // Determinar niveles de contenedores basados en los valores de distancia
-  // Usando la lógica del semáforo
-  const foodContainerLevel = determinarNivelContenedor(datos.pesoComida);
-  const waterContainerLevel = determinarNivelContenedor(datos.pesoAgua);
+  // Determinar niveles de contenedores basados en los valores de los sensores
+  // CORREGIDO: Ahora usando la función actualizada con lógica invertida
+  const foodContainerLevel = determinarNivelContenedor(datos.pesoComida, 20, 100);
+  const waterContainerLevel = determinarNivelContenedor(datos.pesoAgua, 40, 200);
 
   return (
     <div className="IoT-feeder-container">
@@ -186,7 +171,7 @@ const handleDispenseWater = () => {
         {/* Tarjeta del Dispensador de Comida */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
-            <div className={`IoT-tiger-icon ${foodDispensing ? 'IoT-active' : ''}`}></div>
+            <div className={`IoT-food-icon ${foodDispensing ? 'IoT-active' : ''}`}></div>
           </div>
           <div className="IoT-device-info">
             <h2>Dispensador de Comida</h2>
@@ -200,7 +185,7 @@ const handleDispenseWater = () => {
               <button 
                 className="IoT-control-btn IoT-on-btn" 
                 onClick={handleDispenseFood}
-                disabled={foodContainerLevel === "vacio" || foodDispensing || !conectado}
+                disabled={foodContainerLevel === "empty" || foodDispensing || !conectado}
               >
                 Dispensar Comida
               </button>
@@ -222,14 +207,13 @@ const handleDispenseWater = () => {
               </span>
             </div>
             <div className="IoT-control-buttons">
-              {/* Cambio en el botón para que siempre diga "Dispensar Agua" */}
-          <button 
-            className="IoT-control-btn IoT-on-btn" 
-            onClick={handleDispenseWater}
-            disabled={waterContainerLevel === "vacio" || !conectado || datos.bombaAgua}
-          >
-            Dispensar Agua
-          </button>
+              <button 
+                className="IoT-control-btn IoT-on-btn" 
+                onClick={handleDispenseWater}
+                disabled={waterContainerLevel === "empty" || !conectado}
+              >
+                {datos.bombaAgua ? 'Detener' : 'Dispensar Agua'}
+              </button>
             </div>
           </div>
         </div>
@@ -239,7 +223,7 @@ const handleDispenseWater = () => {
         {/* Estado del Contenedor de Comida */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
-            <div className="IoT-container-icon IoT-tiger-food-container">
+            <div className="IoT-container-icon IoT-food-container">
               <div className={`IoT-level-indicator IoT-${foodContainerLevel}`}></div>
             </div>
           </div>
@@ -301,7 +285,7 @@ const handleDispenseWater = () => {
               <button 
                 className="IoT-control-btn IoT-off-btn" 
                 onClick={resetFoodBowl}
-                disabled={foodBowlLevel === "vacio"}
+                disabled={foodBowlLevel === "empty"}
               >
                 Reiniciar Plato
               </button>
@@ -328,7 +312,7 @@ const handleDispenseWater = () => {
               <button 
                 className="IoT-control-btn IoT-off-btn" 
                 onClick={resetWaterBowl}
-                disabled={waterBowlLevel === "vacio"}
+                disabled={waterBowlLevel === "empty"}
               >
                 Reiniciar Plato
               </button>
