@@ -18,11 +18,16 @@ const UserDashboard = () => {
       ? parseInt(localStorage.getItem('lastWaterDispensed')) 
       : null
   );
-  const [lastFoodDispensed, setLastFoodDispensed] = useState(
-    localStorage.getItem('lastFoodDispensed') 
-      ? parseInt(localStorage.getItem('lastFoodDispensed')) 
-      : null
-  );
+  const [lastFoodDispensed, setLastFoodDispensed] = useState(() => {
+    const storedValue = localStorage.getItem('lastFoodDispensed');
+    // Validar que sea un timestamp razonable (no más antiguo que 30 días)
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    if (storedValue && !isNaN(parseInt(storedValue)) && parseInt(storedValue) > thirtyDaysAgo) {
+      return parseInt(storedValue);
+    }
+    // Si no hay valor o es inválido, lo inicializamos a null
+    return null;
+  });
 
   const determinarNivelContenedor = (distancia) => {
     if (!distancia) return "vacio";
@@ -72,12 +77,12 @@ const UserDashboard = () => {
       }
       
       // Actualizar timestamps si vienen del dispositivo
-      if (datos.ultimaComida) {
+      if (datos.ultimaComida && datos.ultimaComida > Date.now() - (30 * 24 * 60 * 60 * 1000)) {
         setLastFoodDispensed(datos.ultimaComida);
         localStorage.setItem('lastFoodDispensed', datos.ultimaComida.toString());
       }
       
-      if (datos.ultimaAgua) {
+      if (datos.ultimaAgua && datos.ultimaAgua > Date.now() - (30 * 24 * 60 * 60 * 1000)) {
         setLastWaterDispensed(datos.ultimaAgua);
         localStorage.setItem('lastWaterDispensed', datos.ultimaAgua.toString());
       }
@@ -104,9 +109,14 @@ const UserDashboard = () => {
     const success = dispensarComida();
     
     if (success) {
+      // Actualizar el timestamp asegurando que usamos el tiempo actual
       const timestamp = Date.now();
-      setLastFoodDispensed(timestamp);
+      console.log("Actualizando timestamp de comida:", timestamp);
+      
+      // Eliminar cualquier valor anterior y establecer el nuevo
+      localStorage.removeItem('lastFoodDispensed');
       localStorage.setItem('lastFoodDispensed', timestamp.toString());
+      setLastFoodDispensed(timestamp);
       
       setTimeout(() => {
         setFoodDispensing(false);
@@ -137,9 +147,14 @@ const UserDashboard = () => {
     const success = controlarBombaAgua(true);
     
     if (success) {
+      // Actualizar el timestamp asegurando que usamos el tiempo actual
       const timestamp = Date.now();
-      setLastWaterDispensed(timestamp);
+      console.log("Actualizando timestamp de agua:", timestamp);
+      
+      // Eliminar cualquier valor anterior y establecer el nuevo
+      localStorage.removeItem('lastWaterDispensed');
       localStorage.setItem('lastWaterDispensed', timestamp.toString());
+      setLastWaterDispensed(timestamp);
       
       setTimeout(() => {
         controlarBombaAgua(false);
@@ -157,6 +172,29 @@ const UserDashboard = () => {
 
   const foodContainerLevel = determinarNivelContenedor(datos.pesoComida);
   const waterContainerLevel = determinarNivelContenedor(datos.pesoAgua);
+
+  // Hook para limpiar los valores corruptos al iniciar
+  useEffect(() => {
+    // Verificar y limpiar timestamps muy antiguos o inválidos al cargar el componente
+    const currentTime = Date.now();
+    const thirtyDaysAgo = currentTime - (30 * 24 * 60 * 60 * 1000);
+    
+    const storedFoodTime = localStorage.getItem('lastFoodDispensed');
+    if (storedFoodTime && 
+      (isNaN(parseInt(storedFoodTime)) || parseInt(storedFoodTime) < thirtyDaysAgo)) {
+      console.log("Limpiando timestamp de comida inválido");
+      localStorage.removeItem('lastFoodDispensed');
+      setLastFoodDispensed(null);
+    }
+    
+    const storedWaterTime = localStorage.getItem('lastWaterDispensed');
+    if (storedWaterTime && 
+      (isNaN(parseInt(storedWaterTime)) || parseInt(storedWaterTime) < thirtyDaysAgo)) {
+      console.log("Limpiando timestamp de agua inválido");
+      localStorage.removeItem('lastWaterDispensed');
+      setLastWaterDispensed(null);
+    }
+  }, []);
 
   return (
     <div className="IoT-feeder-container">
@@ -276,7 +314,14 @@ const UserDashboard = () => {
 const formatTime = (milliseconds) => {
   if (!milliseconds) return 'No disponible';
   
+  // Validar que el timestamp sea razonable (no más antiguo que 30 días)
+  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  if (milliseconds < thirtyDaysAgo) {
+    return 'No disponible';
+  }
+  
   const seconds = Math.floor((Date.now() - milliseconds) / 1000);
+  if (seconds < 0) return `Hace 0 segundos`; // En caso de problemas con el reloj del sistema
   if (seconds < 60) return `Hace ${seconds} segundos`;
   
   const minutes = Math.floor(seconds / 60);
@@ -286,6 +331,7 @@ const formatTime = (milliseconds) => {
   if (hours < 24) return `Hace ${hours} horas`;
   
   const days = Math.floor(hours / 24);
+  if (days > 30) return 'No disponible'; // Sanity check adicional
   return `Hace ${days} días`;
 };
 
