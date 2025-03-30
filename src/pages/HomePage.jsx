@@ -8,7 +8,7 @@ const HomePage = () => {
     <div className="homepage-huellitas-container">
       <section className="homepage-hero-section">
         <div className="homepage-hero-content">
-          <h2>Cuidamos a tus mascotas como si fueran nuestras</h2>
+          <h2>Cuidamos a tus mascotas como si fueran nuestras.</h2>
           <p>Atención veterinaria profesional con amor y dedicación</p>
           <button className="homepage-cta-button">
             
