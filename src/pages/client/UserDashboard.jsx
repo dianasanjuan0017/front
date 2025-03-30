@@ -114,26 +114,35 @@ const UserDashboard = () => {
   };
 
   // Manejar la dispensación de agua
-  const handleDispenseWater = () => {
-    // Validar condiciones según la nueva lógica de semáforo
-    if (!datos.pesoAgua || datos.pesoAgua > 18) {
-      setActionError("El contenedor de agua está vacío");
-      return;
-    }
-    
-    if (!conectado) {
-      setActionError("No hay conexión con el dispositivo");
-      return;
-    }
-    
-    // Alternar estado de dispensación
-    const success = controlarBombaAgua(!datos.bombaAgua);
-    
-    if (!success) {
-      setActionError(`Error al ${datos.bombaAgua ? 'desactivar' : 'activar'} bomba de agua`);
-    }
+ // Manejar la dispensación de agua
+const handleDispenseWater = () => {
+  // Validar condiciones según la nueva lógica de semáforo
+  if (!datos.pesoAgua || datos.pesoAgua > 18) {
+    setActionError("El contenedor de agua está vacío");
+    return;
+  }
+  
+  if (!conectado) {
+    setActionError("No hay conexión con el dispositivo");
+    return;
+  }
+  
+  // Similar a la dispensación de comida, activamos la bomba temporalmente
+  const success = controlarBombaAgua(true);
+  
+  if (success) {
+    // La bomba se desactivará automáticamente después de un tiempo
     // El estado real se actualizará mediante MQTT
-  };
+    setTimeout(() => {
+      // Opcional: podríamos desactivar explícitamente después de un tiempo
+      // controlarBombaAgua(false);
+      // Pero es mejor que el dispositivo lo maneje
+    }, 3000);
+  } else {
+    setActionError("Error al activar bomba de agua");
+  }
+};
+
 
   // Reiniciar el plato de comida (simulando que la mascota come)
   // Esto es solo para la interfaz, no afecta al dispositivo real
@@ -213,13 +222,14 @@ const UserDashboard = () => {
               </span>
             </div>
             <div className="IoT-control-buttons">
-              <button 
-                className="IoT-control-btn IoT-on-btn" 
-                onClick={handleDispenseWater}
-                disabled={waterContainerLevel === "vacio" || !conectado}
-              >
-                {datos.bombaAgua ? 'Detener' : 'Dispensar Agua'}
-              </button>
+              {/* Cambio en el botón para que siempre diga "Dispensar Agua" */}
+          <button 
+            className="IoT-control-btn IoT-on-btn" 
+            onClick={handleDispenseWater}
+            disabled={waterContainerLevel === "vacio" || !conectado || datos.bombaAgua}
+          >
+            Dispensar Agua
+          </button>
             </div>
           </div>
         </div>
