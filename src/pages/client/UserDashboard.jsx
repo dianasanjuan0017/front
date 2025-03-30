@@ -13,6 +13,11 @@ const UserDashboard = () => {
   const [foodDispensing, setFoodDispensing] = useState(false);
   const [waterDispensing, setWaterDispensing] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [lastWaterDispensed, setLastWaterDispensed] = useState(
+    localStorage.getItem('lastWaterDispensed') 
+      ? parseInt(localStorage.getItem('lastWaterDispensed')) 
+      : null
+  );
 
   const determinarNivelContenedor = (distancia) => {
     if (!distancia) return "vacio";
@@ -39,7 +44,6 @@ const UserDashboard = () => {
     if (!loading && datos) {
       setFoodDispensing(false);
       
-      // Sincronizar estado de la bomba con los datos MQTT
       if (datos.bombaAgua) {
         setWaterDispensing(true);
         const nextLevel = waterBowlLevel === "vacio" ? "medio" : "lleno";
@@ -113,6 +117,10 @@ const UserDashboard = () => {
     const success = controlarBombaAgua(true);
     
     if (success) {
+      const timestamp = Date.now();
+      setLastWaterDispensed(timestamp);
+      localStorage.setItem('lastWaterDispensed', timestamp.toString());
+      
       setTimeout(() => {
         controlarBombaAgua(false);
         setWaterDispensing(false);
@@ -121,14 +129,6 @@ const UserDashboard = () => {
       setWaterDispensing(false);
       setActionError("Error al activar la bomba de agua");
     }
-  };
-
-  const resetFoodBowl = () => {
-    setFoodBowlLevel("vacio");
-  };
-
-  const resetWaterBowl = () => {
-    setWaterBowlLevel("vacio");
   };
 
   if (loading) {
@@ -155,7 +155,6 @@ const UserDashboard = () => {
       </div>
 
       <div className="IoT-devices-container">
-        {/* Tarjeta del Dispensador de Comida */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className={`IoT-tiger-icon ${foodDispensing ? 'IoT-active' : ''}`}></div>
@@ -180,7 +179,6 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* Tarjeta del Dispensador de Agua */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className={`IoT-water-icon ${waterDispensing ? 'IoT-active' : ''}`}></div>
@@ -207,7 +205,6 @@ const UserDashboard = () => {
       </div>
 
       <div className="IoT-devices-container">
-        {/* Estado del Contenedor de Comida */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-container-icon IoT-tiger-food-container">
@@ -222,7 +219,6 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* Estado del Contenedor de Agua */}
         <div className="IoT-device-card">
           <div className="IoT-device-icon-container">
             <div className="IoT-container-icon IoT-water-container">
@@ -238,18 +234,14 @@ const UserDashboard = () => {
         </div>
       </div>
 
-    
-      
-      {/* Sección para mostrar información adicional de los sensores */}
       <div className="IoT-devices-container">
         <div className="IoT-device-card IoT-sensor-info">
           <div className="IoT-device-info">
             <h2>Información</h2>
-            // En la sección de información, reemplaza con:
-          <div className="IoT-sensor-data">
-            <p><strong>Última comida:</strong> {datos.ultimaComida ? formatTime(datos.ultimaComida) : 'No disponible'}</p>
-            <p><strong>Última agua:</strong> {datos.ultimaAgua ? formatTime(datos.ultimaAgua) : 'No disponible'}</p>
-          </div>
+            <div className="IoT-sensor-data">
+              <p><strong>Última comida:</strong> {datos.ultimaComida ? formatTime(datos.ultimaComida) : 'No disponible'}</p>
+              <p><strong>Última agua dispensada:</strong> {lastWaterDispensed ? formatTime(lastWaterDispensed) : 'No disponible'}</p>
+            </div>
           </div>
         </div>
       </div>
