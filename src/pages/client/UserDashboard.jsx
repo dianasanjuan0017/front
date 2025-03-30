@@ -244,7 +244,7 @@ const UserDashboard = () => {
       <div className="IoT-devices-container">
         <div className="IoT-device-card IoT-sensor-info">
           <div className="IoT-device-info">
-            <h2>Información de Sensores</h2>
+            <h2>Información</h2>
             <div className="IoT-sensor-data">
               <p><strong>Última comida:</strong> {datos.ultimaComida ? formatTime(datos.ultimaComida) : 'No disponible'}</p>
               <p><strong>Contenedor de comida:</strong> {datos.pesoComida ? `${datos.pesoComida.toFixed(1)}cm` : 'No disponible'}</p>
