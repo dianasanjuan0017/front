@@ -21,9 +21,10 @@ const UserDashboard = () => {
   const [actionError, setActionError] = useState("");
 
   // Función para convertir valores numéricos a niveles visuales (empty, medium, full)
+  // CORREGIDO: Ahora valores más bajos indican "full" y valores más altos indican "empty"
   const determinarNivelContenedor = (peso, umbralBajo, umbralAlto) => {
-    if (!peso || peso <= umbralAlto) return "empty";
-    if (peso > umbralAlto && peso < umbralBajo) return "medium";
+    if (!peso || peso >= umbralAlto) return "empty";
+    if (peso < umbralAlto && peso > umbralBajo) return "medium";
     return "full";
   };
 
@@ -49,19 +50,19 @@ const UserDashboard = () => {
         setWaterBowlLevel(nextLevel);
       }
       
-      // Actualizar plato de comida basado en los datos de los sensores
+      // CORREGIDO: Actualizar plato de comida basado en los datos de los sensores (lógica invertida)
       if (datos.platoComidaLleno) {
         setFoodBowlLevel("full");
-      } else if (datos.pesoComida < 80) { // Umbral para nivel medio
+      } else if (datos.pesoComida < 80) { // Umbral para nivel medio (ahora valores más bajos indican más lleno)
         setFoodBowlLevel("medium");
       } else {
         setFoodBowlLevel("empty");
       }
       
-      // Actualizar plato de agua basado en los datos de los sensores
+      // CORREGIDO: Actualizar plato de agua basado en los datos de los sensores (lógica invertida)
       if (datos.platoAguaLleno) {
         setWaterBowlLevel("full");
-      } else if (datos.pesoAgua < 60) { // Umbral para nivel medio
+      } else if (datos.pesoAgua < 60) { // Umbral para nivel medio (ahora valores más bajos indican más lleno)
         setWaterBowlLevel("medium");
       } else {
         setWaterBowlLevel("empty");
@@ -71,7 +72,7 @@ const UserDashboard = () => {
 
   // Manejar la dispensación de comida
   const handleDispenseFood = () => {
-    // Validar condiciones
+    // CORREGIDO: Validar condiciones (valores altos ahora indican vacío)
     if (!datos.pesoComida || datos.pesoComida > 90) {
       setActionError("El contenedor de comida está vacío");
       return;
@@ -108,7 +109,7 @@ const UserDashboard = () => {
 
   // Manejar la dispensación de agua
   const handleDispenseWater = () => {
-    // Validar condiciones
+    // CORREGIDO: Validar condiciones (valores altos ahora indican vacío)
     if (!datos.pesoAgua || datos.pesoAgua > 180) {
       setActionError("El contenedor de agua está vacío");
       return;
@@ -145,6 +146,7 @@ const UserDashboard = () => {
   }
 
   // Determinar niveles de contenedores basados en los valores de los sensores
+  // CORREGIDO: Ahora usando la función actualizada con lógica invertida
   const foodContainerLevel = determinarNivelContenedor(datos.pesoComida, 20, 100);
   const waterContainerLevel = determinarNivelContenedor(datos.pesoAgua, 40, 200);
 
