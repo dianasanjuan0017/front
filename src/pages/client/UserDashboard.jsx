@@ -216,13 +216,6 @@ const UserDashboard = () => {
           </div>
           <div className="IoT-device-info">
             <h2>Contenedor de Comida</h2>
-            <div className="IoT-status-display">
-              <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${foodContainerLevel}`}>
-                {foodContainerLevel.charAt(0).toUpperCase() + foodContainerLevel.slice(1)}
-                {datos.pesoComida ? ` (${datos.pesoComida.toFixed(1)}g)` : ''}
-              </span>
-            </div>
             {!datos.balanzaComidaLista && (
               <p className="IoT-sensor-warning">Sensor de peso no disponible</p>
             )}
@@ -238,13 +231,6 @@ const UserDashboard = () => {
           </div>
           <div className="IoT-device-info">
             <h2>Contenedor de Agua</h2>
-            <div className="IoT-status-display">
-              <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${waterContainerLevel}`}>
-                {waterContainerLevel.charAt(0).toUpperCase() + waterContainerLevel.slice(1)}
-                {datos.pesoAgua ? ` (${datos.pesoAgua.toFixed(1)}g)` : ''}
-              </span>
-            </div>
             {!datos.balanzaAguaLista && (
               <p className="IoT-sensor-warning">Sensor de peso no disponible</p>
             )}
@@ -252,61 +238,7 @@ const UserDashboard = () => {
         </div>
       </div>
 
-      <div className="IoT-devices-container">
-        {/* Estado del Plato de Comida */}
-        <div className="IoT-device-card">
-          <div className="IoT-device-icon-container">
-            <div className="IoT-bowl-icon IoT-food-bowl">
-              <div className={`IoT-level-indicator IoT-${foodBowlLevel}`}></div>
-            </div>
-          </div>
-          <div className="IoT-device-info">
-            <h2>Plato de Comida</h2>
-            <div className="IoT-status-display">
-              <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${foodBowlLevel}`}>
-                {foodBowlLevel.charAt(0).toUpperCase() + foodBowlLevel.slice(1)}
-              </span>
-            </div>
-            <div className="IoT-control-buttons">
-              <button 
-                className="IoT-control-btn IoT-off-btn" 
-                onClick={resetFoodBowl}
-                disabled={foodBowlLevel === "vacio"}
-              >
-                Reiniciar Plato
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Estado del Plato de Agua */}
-        <div className="IoT-device-card">
-          <div className="IoT-device-icon-container">
-            <div className="IoT-bowl-icon IoT-water-bowl">
-              <div className={`IoT-level-indicator IoT-${waterBowlLevel}`}></div>
-            </div>
-          </div>
-          <div className="IoT-device-info">
-            <h2>Plato de Agua</h2>
-            <div className="IoT-status-display">
-              <span className="IoT-label">Nivel:</span>
-              <span className={`IoT-level-badge IoT-${waterBowlLevel}`}>
-                {waterBowlLevel.charAt(0).toUpperCase() + waterBowlLevel.slice(1)}
-              </span>
-            </div>
-            <div className="IoT-control-buttons">
-              <button 
-                className="IoT-control-btn IoT-off-btn" 
-                onClick={resetWaterBowl}
-                disabled={waterBowlLevel === "vacio"}
-              >
-                Reiniciar Plato
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+    
       
       {/* Sección para mostrar información adicional de los sensores */}
       <div className="IoT-devices-container">
