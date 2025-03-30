@@ -37,8 +37,12 @@ export const useMqtt = (macAddress) => {
         }
         
         try {
-            clientRef.current.publish(`mascota/comida/${macAddress}`, "dispensar");
-            logDebug(`Publicado en mascota/comida/${macAddress}: dispensar`, 'success');
+            // Publicar mensaje para dispensar comida
+            const topic = `mascota/comida/${macAddress}`;
+            const message = "dispensar";
+            logDebug(`Enviando comando: ${topic} => ${message}`, 'info');
+            clientRef.current.publish(topic, message);
+            logDebug(`Publicado en ${topic}: ${message}`, 'success');
             return true;
         } catch (err) {
             logDebug(`Error al publicar mensaje de comida: ${err.message}`, 'error');
@@ -54,8 +58,10 @@ export const useMqtt = (macAddress) => {
         
         try {
             const message = activar ? "activar" : "desactivar";
-            clientRef.current.publish(`mascota/agua/${macAddress}`, message);
-            logDebug(`Publicado en mascota/agua/${macAddress}: ${message}`, 'success');
+            const topic = `mascota/agua/${macAddress}`;
+            logDebug(`Enviando comando: ${topic} => ${message}`, 'info');
+            clientRef.current.publish(topic, message);
+            logDebug(`Publicado en ${topic}: ${message}`, 'success');
             return true;
         } catch (err) {
             logDebug(`Error al publicar mensaje de agua: ${err.message}`, 'error');
@@ -83,29 +89,27 @@ export const useMqtt = (macAddress) => {
         // Incrementar contador de intentos
         connectionAttemptRef.current += 1;
         
-        // Configuración ajustada para EMQX
-        const clientId = `web-${macAddress}-${Math.random().toString(16).substring(2, 10)}`;
+        // Configuración base para MQTT
         const mqttConfig = {
             username: "esp32",
             password: "esp32",
-            clientId: clientId,
+            clientId: `web-${macAddress}-${Math.random().toString(16).substr(2, 8)}-${connectionAttemptRef.current}`,
             clean: true,
-            reconnectPeriod: 3000,
-            connectTimeout: 10000,
-            keepalive: 30,
-            rejectUnauthorized: false,
-            // Evitar protocolo MQTT v5 que puede causar problemas
-            protocolVersion: 4,
-            protocolId: 'MQTT'
+            reconnectPeriod: 5000,
+            connectTimeout: 30000,
+            rejectUnauthorized: false, // Ignora errores de certificados
+            // Configuración importante para WebSocket
+            protocolId: 'MQTT',
+            protocolVersion: 4
         };
 
-        // URL del WebSocket seguro con path ajustado
+        // Usar WebSocket Secure con la URL específica
         const brokerUrl = "wss://raba7554.ala.dedicated.aws.emqxcloud.com:8084/mqtt";
         
-        logDebug(`Intentando conectar a: ${brokerUrl} con clientId: ${clientId}`, 'info');
+        logDebug(`Intentando conectar a: ${brokerUrl}`, 'info');
         
         try {
-            // Crear cliente MQTT con opciones específicas para WebSocket
+            // Crear cliente MQTT
             clientRef.current = MQTT.connect(brokerUrl, mqttConfig);
             
             // Configurar handlers de eventos
@@ -151,15 +155,6 @@ export const useMqtt = (macAddress) => {
             clientRef.current.on('error', (err) => {
                 logDebug(`Error MQTT: ${err.message}`, 'error');
                 setError(`Error de conexión: ${err.message}`);
-                
-                // Para ciertos errores críticos, forzar la desconexión para reiniciar
-                if (err.message.includes('connack timeout') || 
-                   err.message.includes('WebSocket') ||
-                   err.message.includes('connection')) {
-                    if (clientRef.current) {
-                        clientRef.current.end(true);
-                    }
-                }
             });
 
             clientRef.current.on('message', (topic, message) => {
@@ -204,6 +199,10 @@ export const useMqtt = (macAddress) => {
                         setDatos(prevData => ({...prevData, bombaAgua: true}));
                     } else if (messageStr === "agua:desactivada") {
                         setDatos(prevData => ({...prevData, bombaAgua: false}));
+                    } else if (messageStr === "comida:dispensando") {
+                        logDebug("Dispensador de comida activado", 'success');
+                    } else if (messageStr === "comida:completado") {
+                        logDebug("Dispensador de comida completado", 'success');
                     }
                 }
             });
@@ -266,4 +265,3 @@ export const useMqtt = (macAddress) => {
         controlarBombaAgua
     };
 };
-
