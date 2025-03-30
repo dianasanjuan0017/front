@@ -168,7 +168,7 @@ const UserDashboard = () => {
                 {foodDispensing ? 'Dispensando' : 'Inactivo'}
               </span>
             </div>
-            <div className="IoT-control-buttons">
+            <div className="IoT-control-buttons"> 
               <button 
                 className="IoT-control-btn IoT-on-btn" 
                 onClick={handleDispenseFood}
@@ -247,8 +247,8 @@ const UserDashboard = () => {
             <h2>Información de Sensores</h2>
             <div className="IoT-sensor-data">
               <p><strong>Última comida:</strong> {datos.ultimaComida ? formatTime(datos.ultimaComida) : 'No disponible'}</p>
-              <p><strong>Contenedor de comida:</strong> {datos.pesoComida ? `${datos.pesoComida.toFixed(1)}g` : 'No disponible'}</p>
-              <p><strong>Contenedor de agua:</strong> {datos.pesoAgua ? `${datos.pesoAgua.toFixed(1)}g` : 'No disponible'}</p>
+              <p><strong>Contenedor de comida:</strong> {datos.pesoComida ? `${datos.pesoComida.toFixed(1)}cm` : 'No disponible'}</p>
+              <p><strong>Contenedor de agua:</strong> {datos.pesoAgua ? `${datos.pesoAgua.toFixed(1)}cm` : 'No disponible'}</p>
             </div>
           </div>
         </div>
