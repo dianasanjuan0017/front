@@ -260,12 +260,10 @@ const UserDashboard = () => {
             <h2>Información</h2>
             <div className="IoT-sensor-data">
               <p>
-                <strong>Comida:</strong> {datos.pesoComida ? `${datos.pesoComida.toFixed(2)} kg` : '0.00 kg'} | 
-                <strong> Último uso:</strong> {lastFoodDispensed ? formatTime(lastFoodDispensed) : 'No disponible'}
+                <strong>Comida:</strong> {lastFoodDispensed ? formatTime(lastFoodDispensed) : 'No disponible'}
               </p>
               <p>
-                <strong>Agua:</strong> {datos.pesoAgua ? `${datos.pesoAgua.toFixed(2)} kg` : '0.00 kg'} | 
-                <strong> Último uso:</strong> {lastWaterDispensed ? formatTime(lastWaterDispensed) : 'No disponible'}
+                <strong>Agua:</strong> {lastWaterDispensed ? formatTime(lastWaterDispensed) : 'No disponible'}
               </p>
             </div>
           </div>
@@ -278,17 +276,17 @@ const UserDashboard = () => {
 const formatTime = (milliseconds) => {
   if (!milliseconds) return 'No disponible';
   
-  const date = new Date(milliseconds);
+  const seconds = Math.floor((Date.now() - milliseconds) / 1000);
+  if (seconds < 60) return `Hace ${seconds} segundos`;
   
-  // Formato: DD/MM/YYYY HH:MM:SS
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `Hace ${minutes} minutos`;
   
-  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Hace ${hours} horas`;
+  
+  const days = Math.floor(hours / 24);
+  return `Hace ${days} días`;
 };
 
 export default UserDashboard;
