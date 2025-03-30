@@ -22,8 +22,8 @@ const UserDashboard = () => {
 
   // Función para convertir valores numéricos a niveles visuales (empty, medium, full)
   const determinarNivelContenedor = (peso, umbralBajo, umbralAlto) => {
-    if (!peso || peso <= umbralBajo) return "empty";
-    if (peso > umbralBajo && peso < umbralAlto) return "medium";
+    if (!peso || peso <= umbralAlto) return "empty";
+    if (peso > umbralAlto && peso < umbralBajo) return "medium";
     return "full";
   };
 
@@ -52,7 +52,7 @@ const UserDashboard = () => {
       // Actualizar plato de comida basado en los datos de los sensores
       if (datos.platoComidaLleno) {
         setFoodBowlLevel("full");
-      } else if (datos.pesoComida > 20) { // Umbral para nivel medio
+      } else if (datos.pesoComida < 80) { // Umbral para nivel medio
         setFoodBowlLevel("medium");
       } else {
         setFoodBowlLevel("empty");
@@ -61,7 +61,7 @@ const UserDashboard = () => {
       // Actualizar plato de agua basado en los datos de los sensores
       if (datos.platoAguaLleno) {
         setWaterBowlLevel("full");
-      } else if (datos.pesoAgua > 40) { // Umbral para nivel medio
+      } else if (datos.pesoAgua < 60) { // Umbral para nivel medio
         setWaterBowlLevel("medium");
       } else {
         setWaterBowlLevel("empty");
@@ -72,7 +72,7 @@ const UserDashboard = () => {
   // Manejar la dispensación de comida
   const handleDispenseFood = () => {
     // Validar condiciones
-    if (!datos.pesoComida || datos.pesoComida < 10) {
+    if (!datos.pesoComida || datos.pesoComida > 90) {
       setActionError("El contenedor de comida está vacío");
       return;
     }
@@ -109,7 +109,7 @@ const UserDashboard = () => {
   // Manejar la dispensación de agua
   const handleDispenseWater = () => {
     // Validar condiciones
-    if (!datos.pesoAgua || datos.pesoAgua < 20) {
+    if (!datos.pesoAgua || datos.pesoAgua > 180) {
       setActionError("El contenedor de agua está vacío");
       return;
     }
