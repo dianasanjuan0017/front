@@ -116,7 +116,7 @@ const UserDashboard = () => {
       setTimeout(() => {
         controlarBombaAgua(false);
         setWaterDispensing(false);
-      }, 7500);
+      }, 6500);
     } else {
       setWaterDispensing(false);
       setActionError("Error al activar la bomba de agua");
