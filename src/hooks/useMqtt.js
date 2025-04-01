@@ -104,7 +104,7 @@ export const useMqtt = (macAddress) => {
         };
 
         // Usar WebSocket Secure con la URL específica
-        const brokerUrl = "wss://raba7554.ala.dedicated.aws.emqxcloud.com:8084/mqtt";
+        const brokerUrl = "wss://m6209e92.ala.dedicated.aws.emqxcloud.com:8084/mqtt";
         
         logDebug(`Intentando conectar a: ${brokerUrl}`, 'info');
         
